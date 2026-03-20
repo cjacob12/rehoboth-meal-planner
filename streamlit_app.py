@@ -80,11 +80,31 @@ def clear_meal(data, day, meal_type):
         save_data(data)
 
 
-def search_recipes(query):
+def search_recipes(query, meal_context=""):
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
+        parts = [query.strip()]
+        if meal_context:
+            parts.insert(0, meal_context)
+        parts.append("recipe")
+        full_query = " ".join(parts)
         with DDGS() as ddgs:
-            return list(ddgs.text(f"{query} recipe", max_results=6))
+            try:
+                img_results = list(ddgs.images(full_query, max_results=6))
+                if img_results:
+                    return [
+                        {
+                            "title": r.get("title", ""),
+                            "href": r.get("url", ""),
+                            "body": r.get("source", ""),
+                            "image": r.get("thumbnail", r.get("image", "")),
+                        }
+                        for r in img_results
+                    ]
+            except Exception:
+                pass
+            text_results = list(ddgs.text(full_query, max_results=6))
+            return [dict(r, image="") for r in text_results]
     except Exception:
         return []
 
@@ -405,6 +425,18 @@ CUSTOM_CSS = f"""
         color: var(--text-muted);
         margin: 2px 0;
     }}
+    .search-result-img {{
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        flex-shrink: 0;
+    }}
+    .search-result-flex {{
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }}
 </style>
 """
 
@@ -592,19 +624,35 @@ with tab_meals:
                     key=f"notes_{meal_type}",
                 )
 
-                with st.expander("Search for recipes"):
-                    search_q = st.text_input("Search", placeholder="e.g. beach tacos", key=f"sq_{meal_type}", label_visibility="collapsed")
-                    if st.button("Search recipes", key=f"sbtn_{meal_type}", use_container_width=True):
-                        if search_q.strip():
-                            with st.spinner("Searching..."):
-                                st.session_state.search_results = search_recipes(search_q.strip())
-                            st.rerun()
+                st.markdown("---")
+                st.caption("\U0001f50d Find a Recipe")
+                with st.form(key=f"search_form_{meal_type}"):
+                    search_q = st.text_input("Search recipes", placeholder=f"e.g. {meal_type.lower()} ideas, grilled chicken", key=f"sq_{meal_type}", label_visibility="collapsed")
+                    search_submitted = st.form_submit_button("\U0001f50d Search Recipes", use_container_width=True)
 
-                    if st.session_state.search_results:
-                        for ri, r in enumerate(st.session_state.search_results):
-                            r_title = r.get("title", "")
-                            r_url = r.get("href", "")
-                            r_body = r.get("body", "")[:100]
+                if search_submitted:
+                    q = search_q.strip() if search_q.strip() else edit_name.strip()
+                    if q:
+                        with st.spinner("Searching recipes..."):
+                            st.session_state.search_results = search_recipes(q, meal_context=meal_type)
+                        st.rerun()
+
+                if st.session_state.search_results:
+                    for ri, r in enumerate(st.session_state.search_results):
+                        r_title = r.get("title", "")
+                        r_url = r.get("href", "")
+                        r_body = r.get("body", "")[:120]
+                        r_image = r.get("image", "")
+                        if r_image:
+                            st.markdown(
+                                f'<div class="search-result"><div class="search-result-flex">'
+                                f'<img class="search-result-img" src="{r_image}" onerror="this.style.display=\'none\'">'
+                                f'<div><div class="search-result-title">{r_title}</div>'
+                                f'<div class="search-result-snippet">{r_body}</div></div>'
+                                f'</div></div>',
+                                unsafe_allow_html=True,
+                            )
+                        else:
                             st.markdown(
                                 f'<div class="search-result">'
                                 f'<div class="search-result-title">{r_title}</div>'
@@ -612,23 +660,23 @@ with tab_meals:
                                 f'</div>',
                                 unsafe_allow_html=True,
                             )
-                            rc1, rc2 = st.columns(2)
-                            with rc1:
-                                if r_url:
-                                    st.markdown(f"[Open]({r_url})")
-                            with rc2:
-                                if st.button("Use this", key=f"use_{meal_type}_{ri}", use_container_width=True):
-                                    set_meal(data, current_day, meal_type, {
-                                        "name": r_title,
-                                        "style": edit_style,
-                                        "cook": edit_cook if edit_cook != "(nobody yet)" else "",
-                                        "recipe_url": r_url,
-                                        "notes": edit_notes.strip(),
-                                    })
-                                    st.session_state.data = data
-                                    st.session_state.editing_meal = None
-                                    st.session_state.search_results = []
-                                    st.rerun()
+                        rc1, rc2 = st.columns(2)
+                        with rc1:
+                            if r_url:
+                                st.markdown(f"[Open recipe]({r_url})")
+                        with rc2:
+                            if st.button("Use this", key=f"use_{meal_type}_{ri}", use_container_width=True):
+                                set_meal(data, current_day, meal_type, {
+                                    "name": r_title if r_title else edit_name.strip(),
+                                    "style": edit_style,
+                                    "cook": edit_cook if edit_cook != "(nobody yet)" else "",
+                                    "recipe_url": r_url,
+                                    "notes": edit_notes.strip(),
+                                })
+                                st.session_state.data = data
+                                st.session_state.editing_meal = None
+                                st.session_state.search_results = []
+                                st.rerun()
 
                 if st.button("Save", key=f"save_{meal_type}", type="primary", use_container_width=True):
                     set_meal(data, current_day, meal_type, {
@@ -648,25 +696,21 @@ with tab_meals:
 with tab_grocery:
     st.markdown("### \U0001f6d2 Grocery List")
 
-    gc1, gc2 = st.columns([3, 1])
-    with gc1:
+    with st.form(key="grocery_form", clear_on_submit=True):
         new_item = st.text_input("Add item", placeholder="e.g. chicken thighs (3 lbs)", key="new_grocery", label_visibility="collapsed")
-    with gc2:
-        new_context = ""
-
-    gc3, gc4 = st.columns([3, 1])
-    with gc3:
-        new_context = st.text_input("For which meal? (optional)", placeholder="e.g. Tuesday dinner", key="grocery_ctx", label_visibility="collapsed")
-    with gc4:
-        if st.button("Add", key="add_grocery", type="primary", use_container_width=True):
-            if new_item.strip():
-                data["grocery"].append({
-                    "name": new_item.strip(),
-                    "context": new_context.strip(),
-                    "checked": False,
-                })
-                save_data(data)
-                st.rerun()
+        gf_cols = st.columns([3, 1])
+        with gf_cols[0]:
+            new_context = st.text_input("For which meal? (optional)", placeholder="e.g. Tuesday dinner", key="grocery_ctx", label_visibility="collapsed")
+        with gf_cols[1]:
+            grocery_submitted = st.form_submit_button("Add", use_container_width=True)
+    if grocery_submitted and new_item.strip():
+        data["grocery"].append({
+            "name": new_item.strip(),
+            "context": new_context.strip(),
+            "checked": False,
+        })
+        save_data(data)
+        st.rerun()
 
     unchecked = [(i, g) for i, g in enumerate(data["grocery"]) if not g.get("checked")]
     checked = [(i, g) for i, g in enumerate(data["grocery"]) if g.get("checked")]
@@ -716,6 +760,21 @@ with tab_grocery:
 with tab_staples:
     st.markdown("### \U0001f34c Snacks & Staples")
     st.caption("Recurring items for the trip — not tied to specific days")
+    total_staples = len(data["staples"]["snacks"]) + len(data["staples"]["toddler"])
+    if total_staples > 0:
+        all_chips = ""
+        for s in data["staples"]["snacks"]:
+            all_chips += f'<span class="staple-chip" style="border-color:var(--seafoam);">\U0001f95c {s}</span>'
+        for s in data["staples"]["toddler"]:
+            all_chips += f'<span class="staple-chip" style="border-color:var(--sunset);">\U0001f476 {s}</span>'
+        st.markdown(
+            f'<div style="background:var(--shell-white);border:1.5px solid var(--sand-dark);border-radius:12px;padding:12px 14px;margin-bottom:12px;">'
+            f'<div style="font-weight:700;color:var(--ocean-deep);margin-bottom:8px;">\U0001f4cb All Staples ({total_staples})</div>'
+            f'<div>{all_chips}</div>'
+            f'<div style="font-size:0.8em;color:var(--text-muted);margin-top:8px;">\u2705 Auto-added to Grocery List</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     st.markdown("**Snacks (everyone)**")
     snacks = data["staples"]["snacks"]
@@ -725,20 +784,23 @@ with tab_staples:
     else:
         st.caption("No snacks added yet")
 
-    sc1, sc2 = st.columns([3, 1])
-    with sc1:
-        new_snack = st.text_input("Add snack", placeholder="e.g. hummus, chips", key="new_snack", label_visibility="collapsed")
-    with sc2:
-        if st.button("Add", key="add_snack", type="primary", use_container_width=True):
-            if new_snack.strip():
-                data["staples"]["snacks"].append(new_snack.strip())
-                save_data(data)
-                st.rerun()
+    with st.form(key="snack_form", clear_on_submit=True):
+        snack_cols = st.columns([3, 1])
+        with snack_cols[0]:
+            new_snack = st.text_input("Add snack", placeholder="e.g. hummus, chips", key="new_snack", label_visibility="collapsed")
+        with snack_cols[1]:
+            snack_submitted = st.form_submit_button("Add", use_container_width=True)
+    if snack_submitted and new_snack.strip():
+        data["staples"]["snacks"].append(new_snack.strip())
+        data["grocery"].append({"name": new_snack.strip(), "context": "Staple - Snack", "checked": False})
+        save_data(data)
+        st.rerun()
 
     if snacks:
         remove_snack = st.selectbox("Remove a snack", [""] + snacks, key="rm_snack", label_visibility="collapsed")
         if remove_snack and st.button("Remove selected snack", key="do_rm_snack", type="secondary", use_container_width=True):
             data["staples"]["snacks"].remove(remove_snack)
+            data["grocery"] = [g for g in data["grocery"] if not (g["name"] == remove_snack and g.get("context", "").startswith("Staple"))]
             save_data(data)
             st.rerun()
 
@@ -751,19 +813,22 @@ with tab_staples:
     else:
         st.caption("No toddler staples added yet")
 
-    tc1, tc2 = st.columns([3, 1])
-    with tc1:
-        new_toddler = st.text_input("Add toddler staple", placeholder="e.g. pouches, bananas", key="new_toddler", label_visibility="collapsed")
-    with tc2:
-        if st.button("Add", key="add_toddler", type="primary", use_container_width=True):
-            if new_toddler.strip():
-                data["staples"]["toddler"].append(new_toddler.strip())
-                save_data(data)
-                st.rerun()
+    with st.form(key="toddler_form", clear_on_submit=True):
+        toddler_cols = st.columns([3, 1])
+        with toddler_cols[0]:
+            new_toddler = st.text_input("Add toddler staple", placeholder="e.g. pouches, bananas", key="new_toddler", label_visibility="collapsed")
+        with toddler_cols[1]:
+            toddler_submitted = st.form_submit_button("Add", use_container_width=True)
+    if toddler_submitted and new_toddler.strip():
+        data["staples"]["toddler"].append(new_toddler.strip())
+        data["grocery"].append({"name": new_toddler.strip(), "context": "Staple - Toddler", "checked": False})
+        save_data(data)
+        st.rerun()
 
     if toddler:
         remove_toddler = st.selectbox("Remove a toddler staple", [""] + toddler, key="rm_toddler", label_visibility="collapsed")
         if remove_toddler and st.button("Remove selected staple", key="do_rm_toddler", type="secondary", use_container_width=True):
             data["staples"]["toddler"].remove(remove_toddler)
+            data["grocery"] = [g for g in data["grocery"] if not (g["name"] == remove_toddler and g.get("context", "").startswith("Staple"))]
             save_data(data)
             st.rerun()
