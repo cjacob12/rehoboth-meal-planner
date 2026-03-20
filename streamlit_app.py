@@ -596,13 +596,6 @@ with tab_meals:
                     key=f"style_{meal_type}",
                 )
 
-                edit_name = st.text_input(
-                    "What's planned?",
-                    value=name,
-                    placeholder="e.g. Grilled chicken + corn",
-                    key=f"name_{meal_type}",
-                )
-
                 edit_cook = st.selectbox(
                     "Who's cooking?",
                     ["(nobody yet)"] + MEMBERS,
@@ -610,11 +603,19 @@ with tab_meals:
                     key=f"cook_{meal_type}",
                 )
 
-                edit_recipe = st.text_input(
-                    "Recipe URL",
-                    value=recipe_url,
-                    placeholder="Paste a link or search below",
-                    key=f"recipe_{meal_type}",
+                edit_name = st.text_input(
+                    "What's planned?",
+                    value=name,
+                    placeholder="e.g. Grilled chicken + corn",
+                    key=f"name_{meal_type}",
+                )
+
+                ingredients = meal.get("ingredients", "")
+                edit_ingredients = st.text_input(
+                    "Ingredients (comma-separated \u2192 auto-added to grocery list)",
+                    value=ingredients,
+                    placeholder="e.g. chicken thighs, corn on the cob, olive oil",
+                    key=f"ingredients_{meal_type}",
                 )
 
                 edit_notes = st.text_input(
@@ -624,12 +625,11 @@ with tab_meals:
                     key=f"notes_{meal_type}",
                 )
 
-                ingredients = meal.get("ingredients", "")
-                edit_ingredients = st.text_input(
-                    "Ingredients (comma-separated → auto-added to grocery list)",
-                    value=ingredients,
-                    placeholder="e.g. chicken thighs, corn on the cob, olive oil",
-                    key=f"ingredients_{meal_type}",
+                edit_recipe = st.text_input(
+                    "Recipe URL",
+                    value=recipe_url,
+                    placeholder="Paste a link",
+                    key=f"recipe_{meal_type}",
                 )
 
                 st.markdown("---")
