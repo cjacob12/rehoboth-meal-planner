@@ -24,6 +24,14 @@ MEALS = ["Breakfast", "Lunch", "Dinner"]
 MEAL_STYLES = ["Home", "Out", "Leftovers", "Flexible"]
 MEAL_ICONS = {"Home": "\U0001f3e0", "Out": "\U0001f37d\ufe0f", "Leftovers": "\U0001f4e6", "Flexible": "\U0001f937"}
 MEAL_TYPE_ICONS = {"Breakfast": "\u2600\ufe0f", "Lunch": "\U0001f334", "Dinner": "\U0001f305"}
+COOK_COLORS = {
+    "Christa": "#2d9bb0",
+    "Mike": "#e07650",
+    "Nancy": "#5cbdad",
+    "Dave": "#8a6bbf",
+    "Ling Ling": "#e8985e",
+    "Lauren": "#c75d88",
+}
 
 
 def get_base64_image(path):
@@ -437,6 +445,79 @@ CUSTOM_CSS = f"""
         gap: 12px;
         align-items: flex-start;
     }}
+
+    .overview-grid {{
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        margin: 8px 0 16px;
+    }}
+    .overview-day-header {{
+        font-weight: 700;
+        font-size: 0.75em;
+        color: var(--ocean-deep);
+        text-align: center;
+        padding: 6px 2px;
+        background: var(--sand-dark);
+        border-radius: 8px 8px 0 0;
+    }}
+    .overview-cell {{
+        background: var(--shell-white);
+        border: 1px solid var(--sand-dark);
+        border-radius: 8px;
+        padding: 6px 5px;
+        min-height: 54px;
+        font-size: 0.72em;
+        line-height: 1.3;
+    }}
+    .overview-cell-meal {{
+        font-weight: 600;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }}
+    .overview-cell-cook {{
+        display: inline-block;
+        padding: 1px 6px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        font-weight: 600;
+        color: white;
+        margin-top: 2px;
+    }}
+    .overview-cell-empty {{
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 0.85em;
+    }}
+    .overview-meal-label {{
+        font-size: 0.7em;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }}
+    .overview-legend {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 8px 0 12px;
+        justify-content: center;
+    }}
+    .overview-legend-item {{
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.8em;
+        color: var(--text-secondary);
+    }}
+    .overview-legend-dot {{
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }}
 </style>
 """
 
@@ -512,7 +593,43 @@ with col_switch:
 if st.session_state.show_help:
     st.markdown(HOW_TO_HTML, unsafe_allow_html=True)
 
-tab_meals, tab_grocery, tab_staples = st.tabs(["\U0001f37d\ufe0f Meals", "\U0001f6d2 Grocery List", "\U0001f34c Staples"])
+tab_overview, tab_meals, tab_grocery, tab_staples = st.tabs(["\U0001f4c5 Overview", "\U0001f37d\ufe0f Meals", "\U0001f6d2 Grocery List", "\U0001f34c Staples"])
+
+with tab_overview:
+    st.markdown("### \U0001f4c5 Week at a Glance")
+    legend_html = '<div class="overview-legend">'
+    for member, color in COOK_COLORS.items():
+        legend_html += f'<span class="overview-legend-item"><span class="overview-legend-dot" style="background:{color};"></span>{member}</span>'
+    legend_html += '</div>'
+    st.markdown(legend_html, unsafe_allow_html=True)
+
+    for meal_type in MEALS:
+        icon = MEAL_TYPE_ICONS.get(meal_type, "")
+        st.markdown(f"**{icon} {meal_type}**")
+        grid_html = '<div class="overview-grid">'
+        for day in DAYS:
+            day_short = day.strftime("%a %m/%d")
+            grid_html += f'<div class="overview-day-header">{day_short}</div>'
+        grid_html += '</div><div class="overview-grid">'
+        for day in DAYS:
+            m = get_meal(data, day, meal_type)
+            m_name = m.get("name", "")
+            m_cook = m.get("cook", "")
+            m_style = m.get("style", "")
+            style_icon = MEAL_ICONS.get(m_style, "")
+            if m_name:
+                cook_color = COOK_COLORS.get(m_cook, "#8a7a6b")
+                cook_badge = f'<div><span class="overview-cell-cook" style="background:{cook_color};">{m_cook}</span></div>' if m_cook else ""
+                grid_html += (
+                    f'<div class="overview-cell">'
+                    f'<div class="overview-cell-meal">{style_icon} {m_name}</div>'
+                    f'{cook_badge}'
+                    f'</div>'
+                )
+            else:
+                grid_html += '<div class="overview-cell"><div class="overview-cell-empty">\u2014</div></div>'
+        grid_html += '</div>'
+        st.markdown(grid_html, unsafe_allow_html=True)
 
 with tab_meals:
     day_idx = st.session_state.current_day_idx
