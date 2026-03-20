@@ -624,6 +624,14 @@ with tab_meals:
                     key=f"notes_{meal_type}",
                 )
 
+                ingredients = meal.get("ingredients", "")
+                edit_ingredients = st.text_input(
+                    "Ingredients (comma-separated → auto-added to grocery list)",
+                    value=ingredients,
+                    placeholder="e.g. chicken thighs, corn on the cob, olive oil",
+                    key=f"ingredients_{meal_type}",
+                )
+
                 st.markdown("---")
                 st.caption("\U0001f50d Find a Recipe")
                 with st.form(key=f"search_form_{meal_type}"):
@@ -666,26 +674,44 @@ with tab_meals:
                                 st.markdown(f"[Open recipe]({r_url})")
                         with rc2:
                             if st.button("Use this", key=f"use_{meal_type}_{ri}", use_container_width=True):
+                                cur_ingredients = edit_ingredients.strip()
                                 set_meal(data, current_day, meal_type, {
                                     "name": r_title if r_title else edit_name.strip(),
                                     "style": edit_style,
                                     "cook": edit_cook if edit_cook != "(nobody yet)" else "",
                                     "recipe_url": r_url,
                                     "notes": edit_notes.strip(),
+                                    "ingredients": cur_ingredients,
                                 })
+                                old_set = {x.strip().lower() for x in meal.get("ingredients", "").split(",") if x.strip()}
+                                day_label = current_day.strftime("%A") + " " + meal_type.lower()
+                                for item in [x.strip() for x in cur_ingredients.split(",") if x.strip()]:
+                                    if item.lower() not in old_set:
+                                        data["grocery"].append({"name": item, "context": day_label, "checked": False})
+                                save_data(data)
                                 st.session_state.data = data
                                 st.session_state.editing_meal = None
                                 st.session_state.search_results = []
                                 st.rerun()
 
                 if st.button("Save", key=f"save_{meal_type}", type="primary", use_container_width=True):
+                    new_ingredients_str = edit_ingredients.strip()
+                    old_ingredients_str = meal.get("ingredients", "")
                     set_meal(data, current_day, meal_type, {
                         "name": edit_name.strip(),
                         "style": edit_style,
                         "cook": edit_cook if edit_cook != "(nobody yet)" else "",
                         "recipe_url": edit_recipe.strip(),
                         "notes": edit_notes.strip(),
+                        "ingredients": new_ingredients_str,
                     })
+                    old_set = {x.strip().lower() for x in old_ingredients_str.split(",") if x.strip()} if old_ingredients_str else set()
+                    new_items = [x.strip() for x in new_ingredients_str.split(",") if x.strip()]
+                    day_label = current_day.strftime("%A") + " " + meal_type.lower()
+                    for item in new_items:
+                        if item.lower() not in old_set:
+                            data["grocery"].append({"name": item, "context": day_label, "checked": False})
+                    save_data(data)
                     st.session_state.data = data
                     st.session_state.editing_meal = None
                     st.session_state.search_results = []
