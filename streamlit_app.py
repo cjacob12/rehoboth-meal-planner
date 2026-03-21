@@ -234,6 +234,46 @@ def fetch_meal_image(query):
     return ""
 
 
+def scrape_recipe_ingredients(url):
+    if not url or not url.startswith("http"):
+        return []
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                ld = json.loads(script.string or "")
+                items = ld if isinstance(ld, list) else [ld]
+                for item in items:
+                    if isinstance(item, dict) and item.get("@graph"):
+                        items.extend(item["@graph"])
+                for item in items:
+                    if isinstance(item, dict) and item.get("@type") in ("Recipe", ["Recipe"]):
+                        ing = item.get("recipeIngredient", [])
+                        if ing and isinstance(ing, list):
+                            return [str(i).strip() for i in ing if str(i).strip()]
+            except (json.JSONDecodeError, TypeError, KeyError):
+                continue
+        for selector in [
+            "ul.wprm-recipe-ingredients li",
+            "ul.recipe-ingredients li",
+            "ul.ingredients li",
+            "li[itemprop='recipeIngredient']",
+            "span[data-ingredient]",
+            ".ingredient-list li",
+            ".recipe__list--ingredients li",
+        ]:
+            items = soup.select(selector)
+            if items:
+                return [el.get_text(strip=True) for el in items if el.get_text(strip=True)]
+    except Exception:
+        pass
+    return []
+
+
 def search_recipes(query, meal_context=""):
     try:
         from ddgs import DDGS
@@ -1002,13 +1042,22 @@ with tab_meals:
                                 st.markdown(f"[Open recipe]({r_url})")
                         with rc2:
                             if st.button("Use this", key=f"use_{meal_type}_{ri}", use_container_width=True):
+                                scraped = scrape_recipe_ingredients(r_url)
+                                scraped_str = ", ".join(scraped) if scraped else ""
+                                existing = edit_ingredients.strip()
+                                if scraped_str and existing:
+                                    merged = existing + ", " + scraped_str
+                                elif scraped_str:
+                                    merged = scraped_str
+                                else:
+                                    merged = existing
                                 st.session_state.selected_recipe = {
                                     "name": r_title if r_title else edit_name.strip(),
                                     "style": edit_style,
                                     "cook": edit_cook if edit_cook != "(nobody yet)" else "",
                                     "recipe_url": r_url,
                                     "notes": edit_notes.strip(),
-                                    "ingredients": edit_ingredients.strip(),
+                                    "ingredients": merged,
                                     "old_ingredients": meal.get("ingredients", ""),
                                     "day": current_day.isoformat(),
                                     "meal_type": meal_type,
@@ -1018,6 +1067,10 @@ with tab_meals:
 
                 if st.button("Save", key=f"save_{meal_type}", type="primary", use_container_width=True):
                     new_ingredients_str = edit_ingredients.strip()
+                    if not new_ingredients_str and edit_recipe.strip():
+                        scraped = scrape_recipe_ingredients(edit_recipe.strip())
+                        if scraped:
+                            new_ingredients_str = ", ".join(scraped)
                     old_ingredients_str = meal.get("ingredients", "")
                     meal_img = meal.get("image", "")
                     if edit_name.strip() and edit_name.strip() != name:
