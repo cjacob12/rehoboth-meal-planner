@@ -3,6 +3,7 @@ import json
 import base64
 from datetime import date, timedelta
 from pathlib import Path
+from collections import OrderedDict
 
 st.set_page_config(
     page_title="Jacob Family Rehoboth Trip - Meal Planner",
@@ -33,6 +34,28 @@ COOK_COLORS = {
     "Lauren": "#c75d88",
 }
 
+GROCERY_SECTIONS = OrderedDict([
+    ("Produce", ["lettuce", "tomato", "tomatoes", "onion", "garlic", "pepper", "cucumber", "avocado", "lime", "lemon", "cilantro", "basil", "parsley", "corn", "potato", "sweet potato", "carrot", "celery", "broccoli", "spinach", "kale", "banana", "apple", "berries", "strawberr", "blueberr", "watermelon", "grapes", "peach", "mango", "pineapple", "orange", "jalapeño", "jalapeno", "zucchini", "squash", "mushroom", "green bean", "asparagus", "bell pepper", "fruit", "salad", "arugula", "cabbage", "ginger", "scallion"]),
+    ("Protein & Meat", ["chicken", "beef", "pork", "turkey", "fish", "salmon", "shrimp", "steak", "ground", "bacon", "sausage", "hot dog", "ham", "deli", "tofu", "eggs", "egg", "thigh", "breast", "wing", "rib"]),
+    ("Dairy", ["milk", "cheese", "yogurt", "butter", "cream", "sour cream", "cream cheese", "mozzarella", "parmesan", "cheddar", "half and half"]),
+    ("Bakery & Bread", ["bread", "bun", "buns", "roll", "rolls", "tortilla", "pita", "bagel", "croissant", "english muffin", "wrap"]),
+    ("Pantry", ["oil", "olive oil", "vinegar", "soy sauce", "ketchup", "mustard", "mayo", "mayonnaise", "salt", "spice", "sugar", "flour", "rice", "pasta", "noodle", "sauce", "salsa", "dressing", "honey", "peanut butter", "jelly", "jam", "cereal", "oat", "granola", "cracker", "nut", "almond", "can", "bean", "beans", "broth", "stock", "seasoning", "marinade"]),
+    ("Snacks", ["hummus", "chips", "dip", "trail mix", "granola bar", "fruit snack", "cookie", "cookies", "brownie", "pretzel", "popcorn", "goldfish", "puffs"]),
+    ("Frozen", ["frozen", "ice cream", "popsicle"]),
+    ("Beverages", ["water", "juice", "soda", "coffee", "tea", "wine", "beer", "seltzer", "lemonade", "drink"]),
+    ("Baby & Kids", ["pouch", "pouches", "formula", "diaper", "diapers", "wipe", "wipes", "snack pack", "juice box"]),
+])
+SECTION_ICONS = {"Produce": "\U0001f966", "Protein & Meat": "\U0001f969", "Dairy": "\U0001f9c0", "Bakery & Bread": "\U0001f35e", "Pantry": "\U0001f3fa", "Snacks": "\U0001f36a", "Frozen": "\U0001f9ca", "Beverages": "\U0001f964", "Baby & Kids": "\U0001f476", "Other": "\U0001f4e6"}
+
+
+def categorize_grocery(name):
+    name_lower = name.lower()
+    for section, keywords in GROCERY_SECTIONS.items():
+        for kw in keywords:
+            if kw in name_lower:
+                return section
+    return "Other"
+
 
 def get_base64_image(path):
     with open(path, "rb") as f:
@@ -42,7 +65,108 @@ def get_base64_image(path):
 img_b64 = get_base64_image(IMAGE_FILE) if IMAGE_FILE.exists() else ""
 
 
+def _use_gsheets():
+    try:
+        return "gcp_service_account" in st.secrets and "spreadsheet" in st.secrets
+    except Exception:
+        return False
+
+
+@st.cache_resource
+def _get_spreadsheet():
+    import gspread
+    from google.oauth2.service_account import Credentials
+    scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(dict(st.secrets["gcp_service_account"]), scopes=scopes)
+    client = gspread.authorize(creds)
+    sh = client.open_by_url(st.secrets["spreadsheet"]["url"])
+    existing = [ws.title for ws in sh.worksheets()]
+    for tab, headers in [("Meals", ["key", "name", "style", "cook", "recipe_url", "notes", "ingredients"]),
+                         ("Grocery", ["name", "context", "checked"]),
+                         ("Snacks", ["name"]),
+                         ("Toddler", ["name"])]:
+        if tab not in existing:
+            ws = sh.add_worksheet(title=tab, rows=200, cols=10)
+            ws.update(range_name="A1", values=[headers])
+    return sh
+
+
+def _load_gsheets():
+    sh = _get_spreadsheet()
+    data = {"meals": {}, "grocery": [], "staples": {"snacks": [], "toddler": []}}
+    try:
+        for row in sh.worksheet("Meals").get_all_records():
+            key = str(row.get("key", ""))
+            if key:
+                data["meals"][key] = {k: str(row.get(k, "")) for k in ["name", "style", "cook", "recipe_url", "notes", "ingredients"]}
+    except Exception:
+        pass
+    try:
+        for row in sh.worksheet("Grocery").get_all_records():
+            n = str(row.get("name", ""))
+            if n:
+                data["grocery"].append({"name": n, "context": str(row.get("context", "")), "checked": row.get("checked", False) in [True, "TRUE", "true", 1]})
+    except Exception:
+        pass
+    try:
+        for row in sh.worksheet("Snacks").get_all_records():
+            n = str(row.get("name", ""))
+            if n:
+                data["staples"]["snacks"].append(n)
+    except Exception:
+        pass
+    try:
+        for row in sh.worksheet("Toddler").get_all_records():
+            n = str(row.get("name", ""))
+            if n:
+                data["staples"]["toddler"].append(n)
+    except Exception:
+        pass
+    return data
+
+
+def _save_gsheets(data):
+    sh = _get_spreadsheet()
+    try:
+        ws = sh.worksheet("Meals")
+        rows = [["key", "name", "style", "cook", "recipe_url", "notes", "ingredients"]]
+        for key, m in data.get("meals", {}).items():
+            rows.append([key, m.get("name", ""), m.get("style", ""), m.get("cook", ""), m.get("recipe_url", ""), m.get("notes", ""), m.get("ingredients", "")])
+        ws.clear()
+        ws.update(range_name="A1", values=rows)
+    except Exception:
+        pass
+    try:
+        ws = sh.worksheet("Grocery")
+        rows = [["name", "context", "checked"]]
+        for g in data.get("grocery", []):
+            rows.append([g["name"], g.get("context", ""), g.get("checked", False)])
+        ws.clear()
+        ws.update(range_name="A1", values=rows)
+    except Exception:
+        pass
+    try:
+        ws = sh.worksheet("Snacks")
+        rows = [["name"]] + [[s] for s in data.get("staples", {}).get("snacks", [])]
+        ws.clear()
+        ws.update(range_name="A1", values=rows)
+    except Exception:
+        pass
+    try:
+        ws = sh.worksheet("Toddler")
+        rows = [["name"]] + [[s] for s in data.get("staples", {}).get("toddler", [])]
+        ws.clear()
+        ws.update(range_name="A1", values=rows)
+    except Exception:
+        pass
+
+
 def load_data():
+    if _use_gsheets():
+        try:
+            return _load_gsheets()
+        except Exception:
+            pass
     if DATA_FILE.exists():
         with open(DATA_FILE, "r") as f:
             return json.load(f)
@@ -50,6 +174,12 @@ def load_data():
 
 
 def save_data(data):
+    if _use_gsheets():
+        try:
+            _save_gsheets(data)
+            return
+        except Exception:
+            pass
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
@@ -578,12 +708,17 @@ st.markdown(ALLERGY_HTML, unsafe_allow_html=True)
 if "show_help" not in st.session_state:
     st.session_state.show_help = False
 
-col_user, col_help, col_switch = st.columns([2.5, 0.8, 0.7])
+col_user, col_help, col_sync, col_switch = st.columns([2, 0.7, 0.7, 0.6])
 with col_user:
-    st.markdown(f'<span class="user-pill">{st.session_state.user_name}</span>', unsafe_allow_html=True)
+    storage_icon = "\U0001f4e1" if _use_gsheets() else "\U0001f4f1"
+    st.markdown(f'<span class="user-pill">{st.session_state.user_name}</span> <span style="font-size:0.75em;color:var(--text-muted);">{storage_icon}</span>', unsafe_allow_html=True)
 with col_help:
     if st.button("Help", key="help_btn", use_container_width=True):
         st.session_state.show_help = not st.session_state.show_help
+        st.rerun()
+with col_sync:
+    if st.button("\U0001f504 Sync", key="sync_btn", use_container_width=True):
+        st.session_state.data = ensure_structure(load_data())
         st.rerun()
 with col_switch:
     if st.button("Switch", key="switch_user"):
@@ -865,35 +1000,78 @@ with tab_grocery:
         with gf_cols[1]:
             grocery_submitted = st.form_submit_button("Add", use_container_width=True)
     if grocery_submitted and new_item.strip():
-        data["grocery"].append({
-            "name": new_item.strip(),
-            "context": new_context.strip(),
-            "checked": False,
-        })
+        existing = [g["name"].lower() for g in data["grocery"]]
+        if new_item.strip().lower() in existing:
+            for g in data["grocery"]:
+                if g["name"].lower() == new_item.strip().lower() and new_context.strip():
+                    old_ctx = g.get("context", "")
+                    g["context"] = f"{old_ctx}, {new_context.strip()}" if old_ctx else new_context.strip()
+                    break
+        else:
+            data["grocery"].append({
+                "name": new_item.strip(),
+                "context": new_context.strip(),
+                "checked": False,
+            })
         save_data(data)
         st.rerun()
 
     unchecked = [(i, g) for i, g in enumerate(data["grocery"]) if not g.get("checked")]
     checked = [(i, g) for i, g in enumerate(data["grocery"]) if g.get("checked")]
 
-    if not unchecked and not checked:
-        st.caption("No grocery items yet. Add some above.")
+    if unchecked:
+        export_cols = st.columns([1, 1])
+        with export_cols[0]:
+            st.caption(f"{len(unchecked)} item(s) to buy")
+        with export_cols[1]:
+            if st.button("\U0001f4cb Copy List", key="export_grocery", use_container_width=True):
+                st.session_state.show_grocery_export = True
+                st.rerun()
 
-    for idx, item in unchecked:
-        gc = st.columns([0.5, 3, 1])
-        with gc[0]:
-            if st.checkbox("", key=f"gc_{idx}", value=False, label_visibility="collapsed"):
-                data["grocery"][idx]["checked"] = True
-                save_data(data)
+        if st.session_state.get("show_grocery_export"):
+            sections = OrderedDict()
+            for _, item in unchecked:
+                sec = categorize_grocery(item["name"])
+                sections.setdefault(sec, []).append(item)
+            export_lines = []
+            for sec, items in sections.items():
+                icon = SECTION_ICONS.get(sec, "")
+                export_lines.append(f"\n{icon} {sec}")
+                for it in items:
+                    ctx = f" ({it['context']})" if it.get("context") else ""
+                    export_lines.append(f"  \u25a2 {it['name']}{ctx}")
+            export_text = "GROCERY LIST\n" + "\n".join(export_lines)
+            st.code(export_text, language=None)
+            if st.button("Hide", key="hide_export"):
+                st.session_state.show_grocery_export = False
                 st.rerun()
-        with gc[1]:
-            ctx = f' <span class="grocery-context">({item["context"]})</span>' if item.get("context") else ""
-            st.markdown(f'{item["name"]}{ctx}', unsafe_allow_html=True)
-        with gc[2]:
-            if st.button("\u2715", key=f"grm_{idx}", use_container_width=True):
-                data["grocery"].pop(idx)
-                save_data(data)
-                st.rerun()
+
+        sections = OrderedDict()
+        for idx, item in unchecked:
+            sec = categorize_grocery(item["name"])
+            sections.setdefault(sec, []).append((idx, item))
+
+        for sec, items in sections.items():
+            icon = SECTION_ICONS.get(sec, "")
+            st.markdown(f'<div style="font-weight:600;font-size:0.85em;color:var(--ocean-deep);margin:12px 0 4px;">{icon} {sec}</div>', unsafe_allow_html=True)
+            for idx, item in items:
+                gc = st.columns([0.5, 3, 1])
+                with gc[0]:
+                    if st.checkbox("", key=f"gc_{idx}", value=False, label_visibility="collapsed"):
+                        data["grocery"][idx]["checked"] = True
+                        save_data(data)
+                        st.rerun()
+                with gc[1]:
+                    ctx = f' <span class="grocery-context">({item["context"]})</span>' if item.get("context") else ""
+                    st.markdown(f'{item["name"]}{ctx}', unsafe_allow_html=True)
+                with gc[2]:
+                    if st.button("\u2715", key=f"grm_{idx}", use_container_width=True):
+                        data["grocery"].pop(idx)
+                        save_data(data)
+                        st.rerun()
+
+    elif not checked:
+        st.caption("No grocery items yet. Add some above.")
 
     if checked:
         st.markdown("---")
