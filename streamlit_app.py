@@ -381,14 +381,15 @@ CUSTOM_CSS = f"""
         background-image: url('data:image/png;base64,{img_b64}');
         background-size: cover;
         background-position: center 40%;
-        opacity: 0.45;
+        opacity: 0.5;
+        filter: grayscale(1) contrast(1.1);
         z-index: 0;
     }}
     .header-banner::after {{
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(135deg, rgba(26,92,107,0.75), rgba(45,155,176,0.55));
+        background: linear-gradient(135deg, rgba(26,92,107,0.6), rgba(45,155,176,0.4));
         z-index: 1;
     }}
     .header-banner h1, .header-banner p {{
@@ -820,7 +821,53 @@ HEADER_HTML = """
 
 ALLERGY_HTML = f'<div class="allergy-banner">\u26a0\ufe0f {ALLERGY_NOTE}</div>'
 
+DARK_CSS = """
+<style>
+    :root {
+        --sand: #1a1a2e;
+        --sand-dark: #2a2a3e;
+        --shell-white: #242438;
+        --text-primary: #e8e4ef;
+        --text-secondary: #b0a8c0;
+        --text-muted: #7a7490;
+    }
+    .stApp { background: #1a1a2e !important; }
+    .stApp > header { background: transparent !important; }
+    .stSelectbox > div > div, .stTextInput > div > div > input, .stTextArea > div > div > textarea {
+        background: #242438 !important;
+        border-color: #3a3a50 !important;
+        color: #e8e4ef !important;
+    }
+    .stSelectbox label, .stTextInput label, .stTextArea label {
+        color: #b0a8c0 !important;
+    }
+    .stTabs [data-baseweb="tab-list"] { background: #2a2a3e; }
+    .stTabs [aria-selected="true"] { background: #242438 !important; color: #5cbdad !important; }
+    .stTabs [data-baseweb="tab"] { color: #7a7490; }
+    div[data-testid="stExpander"] { border-color: #3a3a50 !important; background: #242438 !important; }
+    div[data-testid="stExpander"] summary { color: #e8e4ef !important; }
+    hr { border-color: #3a3a50 !important; }
+    .meal-row { background: rgba(36,36,56,0.7); border-color: rgba(255,255,255,0.08); }
+    .meal-row:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .overview-cell { background: #242438; border-color: #3a3a50; }
+    .overview-cell-out { background: #2e2520; border-color: #4a3a2e; }
+    .overview-day-header { background: #2a2a3e; }
+    .search-result { background: #242438; border-color: #3a3a50; }
+    .grocery-checked { color: #5a5470; }
+    .staple-chip { background: #242438; border-color: #3a3a50; color: #e8e4ef; }
+    .user-pill { background: #2d9bb0; }
+    .how-to-box { background: #242438; border-color: #3a3a50; color: #b0a8c0; }
+    .allergy-banner { background: #2e2520; border-color: #4a3a2e; color: #e8985e; }
+    .progress-bar-bg { background: #2a2a3e; }
+    .header-banner::after { background: linear-gradient(135deg, rgba(10,30,40,0.8), rgba(20,60,80,0.6)); }
+    .stButton > button[kind="secondary"] { border-color: #e07650 !important; color: #e07650 !important; }
+    .stButton > button[kind="secondary"]:hover { background: #2e2520 !important; }
+</style>
+"""
+
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+if st.session_state.get("dark_mode"):
+    st.markdown(DARK_CSS, unsafe_allow_html=True)
 
 if "data" not in st.session_state:
     st.session_state.data = ensure_structure(load_data())
@@ -836,6 +883,8 @@ if "selected_recipe" not in st.session_state:
     st.session_state.selected_recipe = None
 if "toast" not in st.session_state:
     st.session_state.toast = None
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
 
 data = st.session_state.data
 
@@ -870,7 +919,7 @@ st.markdown(ALLERGY_HTML, unsafe_allow_html=True)
 if "show_help" not in st.session_state:
     st.session_state.show_help = False
 
-col_user, col_help, col_sync, col_switch = st.columns([2, 0.7, 0.7, 0.6])
+col_user, col_help, col_sync, col_dark, col_switch = st.columns([2, 0.6, 0.6, 0.5, 0.6])
 with col_user:
     storage_icon = "\U0001f4e1" if _use_gsheets() else "\U0001f4f1"
     st.markdown(f'<span class="user-pill">{st.session_state.user_name}</span> <span style="font-size:0.75em;color:var(--text-muted);">{storage_icon}</span>', unsafe_allow_html=True)
@@ -881,6 +930,11 @@ with col_help:
 with col_sync:
     if st.button("\U0001f504 Sync", key="sync_btn", use_container_width=True):
         st.session_state.data = ensure_structure(load_data())
+        st.rerun()
+with col_dark:
+    dark_icon = "\u2600\ufe0f" if st.session_state.dark_mode else "\U0001f319"
+    if st.button(dark_icon, key="dark_toggle", use_container_width=True):
+        st.session_state.dark_mode = not st.session_state.dark_mode
         st.rerun()
 with col_switch:
     if st.button("Switch", key="switch_user"):
