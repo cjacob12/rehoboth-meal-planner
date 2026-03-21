@@ -604,7 +604,7 @@ CUSTOM_CSS = f"""
     .overview-grid {{
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 6px;
+        gap: 4px 6px;
         margin: 8px 0 16px;
     }}
     .overview-day-header {{
@@ -624,13 +624,16 @@ CUSTOM_CSS = f"""
         min-height: 54px;
         font-size: 0.72em;
         line-height: 1.3;
+        overflow: hidden;
+        word-break: break-word;
     }}
     .overview-cell-meal {{
         font-weight: 600;
         color: var(--text-primary);
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        text-overflow: ellipsis;
     }}
     .overview-cell-cook {{
         display: inline-block;
@@ -772,7 +775,6 @@ with tab_overview:
         for day in DAYS:
             day_short = day.strftime("%a %m/%d")
             grid_html += f'<div class="overview-day-header">{day_short}</div>'
-        grid_html += '</div><div class="overview-grid">'
         for day in DAYS:
             m = get_meal(data, day, meal_type)
             m_name = m.get("name", "")
