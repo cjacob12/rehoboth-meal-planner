@@ -498,33 +498,48 @@ CUSTOM_CSS = f"""
         min-width: 220px;
         text-align: center;
     }}
-    .day-pills {{
-        display: flex;
-        justify-content: center;
-        gap: 6px;
-        margin-bottom: 14px;
-        flex-wrap: wrap;
+    .day-pill-bar {{
+        display: none;
     }}
-    .day-pill {{
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.78em;
-        font-weight: 600;
-        cursor: pointer;
-        border: 1.5px solid var(--sand-dark);
-        background: var(--shell-white);
-        color: var(--text-secondary);
-        transition: all 0.2s;
+    .stVerticalBlock:has(.day-pill-bar) > div[data-testid="stHorizontalBlock"] {{
+        gap: 4px !important;
+        margin-bottom: 10px;
+        flex-wrap: nowrap !important;
     }}
-    .day-pill:hover {{
-        border-color: var(--ocean-light);
-        color: var(--ocean-deep);
+    .stVerticalBlock:has(.day-pill-bar) > div[data-testid="stHorizontalBlock"] > div[data-testid="stColumn"] {{
+        min-width: 0 !important;
+        flex: 1 1 0 !important;
+        width: 0 !important;
     }}
-    .day-pill-active {{
+    .stVerticalBlock:has(.day-pill-bar) button[kind="secondary"] {{
+        border-radius: 20px !important;
+        font-size: 0.78em !important;
+        font-weight: 600 !important;
+        padding: 4px 8px !important;
+        border: 1.5px solid var(--sand-dark) !important;
+        background: var(--shell-white) !important;
+        color: var(--text-secondary) !important;
+        transition: all 0.2s !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.4 !important;
+    }}
+    .stVerticalBlock:has(.day-pill-bar) button[kind="secondary"]:hover {{
+        border-color: var(--ocean-light) !important;
+        color: var(--ocean-deep) !important;
+    }}
+    .stVerticalBlock:has(.day-pill-bar) button[kind="primary"] {{
+        border-radius: 20px !important;
+        font-size: 0.78em !important;
+        font-weight: 600 !important;
+        padding: 4px 8px !important;
         background: linear-gradient(135deg, var(--ocean-mid), var(--seafoam)) !important;
         color: white !important;
-        border-color: transparent !important;
-        box-shadow: 0 2px 8px rgba(45,155,176,0.3);
+        border: 1.5px solid transparent !important;
+        box-shadow: 0 2px 8px rgba(45,155,176,0.3) !important;
+        min-height: 0 !important;
+        height: auto !important;
+        line-height: 1.4 !important;
     }}
 
     .meal-row {{
@@ -1012,9 +1027,9 @@ DARK_CSS = """
     .header-wave svg path { fill: #1a1a2e; }
     .stButton > button[kind="secondary"] { border-color: #e07650 !important; color: #e07650 !important; }
     .stButton > button[kind="secondary"]:hover { background: #2e2520 !important; }
-    .day-pill { background: #242438; border-color: #3a3a50; color: #7a7490; }
-    .day-pill:hover { border-color: #5cbdad; color: #5cbdad; }
-    .day-pill-active { background: linear-gradient(135deg, #2d9bb0, #5cbdad) !important; color: white !important; }
+    .stVerticalBlock:has(.day-pill-bar) button[kind="secondary"] { background: #242438 !important; border-color: #3a3a50 !important; color: #7a7490 !important; }
+    .stVerticalBlock:has(.day-pill-bar) button[kind="secondary"]:hover { border-color: #5cbdad !important; color: #5cbdad !important; }
+    .stVerticalBlock:has(.day-pill-bar) button[kind="primary"] { background: linear-gradient(135deg, #2d9bb0, #5cbdad) !important; color: white !important; }
     .grocery-section-header { background: linear-gradient(90deg, rgba(92,189,173,0.1), transparent); border-left-color: #5cbdad; }
     .section-divider::before, .section-divider::after { background: linear-gradient(90deg, transparent, #3a3a50, transparent); }
     .fab-btn { background: rgba(36,36,56,0.9); border-color: rgba(92,189,173,0.2); color: #5cbdad; }
@@ -1193,29 +1208,22 @@ with tab_meals:
     day_idx = st.session_state.current_day_idx
     current_day = DAYS[day_idx]
 
-    nav_cols = st.columns([1, 4, 1])
-    with nav_cols[0]:
-        if st.button("\u25c0", key="prev_day", disabled=day_idx == 0, use_container_width=True):
-            st.session_state.current_day_idx = max(0, day_idx - 1)
-            st.session_state.editing_meal = None
-            st.session_state.search_results = []
-            st.rerun()
-    with nav_cols[1]:
-        day_label = current_day.strftime("%A, %B %d")
-        st.markdown(f'<div class="day-nav"><span class="day-nav-label">{day_label}</span></div>', unsafe_allow_html=True)
-    with nav_cols[2]:
-        if st.button("\u25b6", key="next_day", disabled=day_idx == len(DAYS) - 1, use_container_width=True):
-            st.session_state.current_day_idx = min(len(DAYS) - 1, day_idx + 1)
-            st.session_state.editing_meal = None
-            st.session_state.search_results = []
-            st.rerun()
+    day_label = current_day.strftime("%A, %B %d")
+    st.markdown(f'<div class="day-nav"><span class="day-nav-label">{day_label}</span></div>', unsafe_allow_html=True)
 
-    day_pills = '<div class="day-pills">'
-    for i, d in enumerate(DAYS):
-        active = " day-pill-active" if i == day_idx else ""
-        day_pills += f'<span class="day-pill{active}">{d.strftime("%a %d")}</span>'
-    day_pills += '</div>'
-    st.markdown(day_pills, unsafe_allow_html=True)
+    pill_container = st.container()
+    with pill_container:
+        st.markdown('<div class="day-pill-bar"></div>', unsafe_allow_html=True)
+        pill_cols = st.columns(len(DAYS))
+        for i, d in enumerate(DAYS):
+            with pill_cols[i]:
+                btn_type = "primary" if i == day_idx else "secondary"
+                if st.button(d.strftime("%a %d"), key=f"pill_{i}", type=btn_type, use_container_width=True):
+                    if i != day_idx:
+                        st.session_state.current_day_idx = i
+                        st.session_state.editing_meal = None
+                        st.session_state.search_results = []
+                        st.rerun()
 
     for meal_type in MEALS:
         meal = get_meal(data, current_day, meal_type)
