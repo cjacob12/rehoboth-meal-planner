@@ -222,7 +222,11 @@ def fetch_meal_image(query):
     try:
         from ddgs import DDGS
         with DDGS() as ddgs:
-            results = list(ddgs.images(f"{query} food dish", max_results=1))
+            results = list(ddgs.images(f"{query} food plated beautiful", max_results=5))
+            for r in results:
+                img = r.get("image", r.get("thumbnail", ""))
+                if img and not img.endswith(".svg"):
+                    return img
             if results:
                 return results[0].get("thumbnail", results[0].get("image", ""))
     except Exception:
@@ -451,17 +455,18 @@ CUSTOM_CSS = f"""
         font-style: italic;
     }}
     .meal-card-img {{
-        width: 64px;
-        height: 64px;
+        width: 80px;
+        height: 80px;
         object-fit: cover;
-        border-radius: 10px;
+        border-radius: 12px;
         flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }}
     .meal-card-flex {{
         display: flex;
-        gap: 12px;
-        align-items: flex-start;
-        margin-top: 4px;
+        gap: 14px;
+        align-items: center;
+        margin-top: 6px;
     }}
 
     .grocery-item {{
@@ -868,6 +873,13 @@ with tab_meals:
         badge_html = f'<span class="meal-style-badge {badge_class}">{MEAL_ICONS.get(style, "")} {style}</span>' if style else ""
 
         if name:
+            if not meal_image:
+                meal_image = fetch_meal_image(name)
+                if meal_image:
+                    meal["image"] = meal_image
+                    set_meal(data, current_day, meal_type, meal)
+                    save_data(data)
+                    st.session_state.data = data
             recipe_html = f' &middot; <a class="meal-recipe-link" href="{recipe_url}" target="_blank">View Recipe</a>' if recipe_url else ""
             cook_html = f'<div class="meal-cook">Cook: {cook}{recipe_html}</div>' if cook else (f'<div class="meal-cook">{recipe_html.lstrip(" &middot; ")}</div>' if recipe_url else "")
             notes_html = f'<div class="meal-cook" style="font-style:italic;">{notes}</div>' if notes else ""
