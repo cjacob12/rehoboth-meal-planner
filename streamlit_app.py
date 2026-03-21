@@ -335,6 +335,8 @@ def search_recipes(query, meal_context=""):
 
 CUSTOM_CSS = f"""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
+
     :root {{
         --sand: #f5f0e8;
         --sand-dark: #e8dfd3;
@@ -353,8 +355,13 @@ CUSTOM_CSS = f"""
         --text-muted: #8a7a6b;
     }}
 
+    * {{
+        font-family: 'Poppins', sans-serif !important;
+    }}
+
     .stApp {{
         background: var(--sand) !important;
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0 Q35 15 30 30 Q25 45 30 60' stroke='%23e0d8cc' stroke-width='0.5' fill='none' opacity='0.4'/%3E%3Cpath d='M0 30 Q15 25 30 30 Q45 35 60 30' stroke='%23e0d8cc' stroke-width='0.5' fill='none' opacity='0.4'/%3E%3C/svg%3E") !important;
     }}
 
     .stApp > header {{
@@ -366,6 +373,11 @@ CUSTOM_CSS = f"""
         max-width: 720px !important;
     }}
 
+    @keyframes gradientShift {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
     .header-banner {{
         position: relative;
         border-radius: 20px;
@@ -387,7 +399,9 @@ CUSTOM_CSS = f"""
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(160deg, rgba(15,55,75,0.72) 0%, rgba(30,120,140,0.55) 50%, rgba(70,170,155,0.45) 100%);
+        background: linear-gradient(160deg, rgba(15,55,75,0.72) 0%, rgba(30,120,140,0.5) 40%, rgba(70,170,155,0.4) 70%, rgba(255,180,100,0.3) 100%);
+        background-size: 200% 200%;
+        animation: gradientShift 8s ease infinite;
         z-index: 1;
     }}
     .header-banner h1, .header-banner p, .header-banner .header-date {{
@@ -484,6 +498,34 @@ CUSTOM_CSS = f"""
         min-width: 220px;
         text-align: center;
     }}
+    .day-pills {{
+        display: flex;
+        justify-content: center;
+        gap: 6px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }}
+    .day-pill {{
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.78em;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1.5px solid var(--sand-dark);
+        background: var(--shell-white);
+        color: var(--text-secondary);
+        transition: all 0.2s;
+    }}
+    .day-pill:hover {{
+        border-color: var(--ocean-light);
+        color: var(--ocean-deep);
+    }}
+    .day-pill-active {{
+        background: linear-gradient(135deg, var(--ocean-mid), var(--seafoam)) !important;
+        color: white !important;
+        border-color: transparent !important;
+        box-shadow: 0 2px 8px rgba(45,155,176,0.3);
+    }}
 
     .meal-row {{
         background: rgba(255,255,255,0.6);
@@ -498,8 +540,9 @@ CUSTOM_CSS = f"""
         box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }}
     .meal-row:hover {{
-        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        transform: translateY(-1px);
+        box-shadow: 0 6px 24px rgba(45,155,176,0.18), 0 2px 8px rgba(0,0,0,0.08);
+        transform: translateY(-2px) scale(1.008);
+        border-color: rgba(45,155,176,0.3);
     }}
     .meal-banner {{
         width: 100%;
@@ -627,6 +670,84 @@ CUSTOM_CSS = f"""
     .grocery-checked {{
         text-decoration: line-through;
         color: var(--text-muted);
+    }}
+    .grocery-section-header {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 0.88em;
+        color: var(--ocean-deep);
+        margin: 16px 0 6px;
+        padding: 6px 12px;
+        background: linear-gradient(90deg, rgba(45,155,176,0.08), transparent);
+        border-radius: 10px;
+        border-left: 3px solid var(--ocean-light);
+    }}
+    .grocery-section-icon {{
+        font-size: 1.2em;
+    }}
+    .grocery-section-count {{
+        font-size: 0.75em;
+        font-weight: 500;
+        color: var(--text-muted);
+        margin-left: auto;
+    }}
+    .section-divider {{
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 20px 0 12px;
+        font-size: 0.8em;
+        color: var(--text-muted);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }}
+    .section-divider::before, .section-divider::after {{
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--sand-dark), transparent);
+    }}
+    .section-divider-icon {{
+        font-size: 1.1em;
+    }}
+    .fab-nav {{
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 9998;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-end;
+    }}
+    .fab-btn {{
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 10px 16px;
+        border-radius: 24px;
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1.5px solid rgba(45,155,176,0.2);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        font-size: 0.82em;
+        font-weight: 600;
+        color: var(--ocean-deep);
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+    }}
+    .fab-btn:hover {{
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        transform: translateY(-2px);
+    }}
+    .fab-icon {{
+        font-size: 1.1em;
     }}
     .grocery-context {{
         font-size: 0.8em;
@@ -887,10 +1008,17 @@ DARK_CSS = """
     .how-to-box { background: #242438; border-color: #3a3a50; color: #b0a8c0; }
     .allergy-banner { background: #2e2520; border-color: #4a3a2e; color: #e8985e; }
     .progress-bar-bg { background: #2a2a3e; }
-    .header-banner::after { background: linear-gradient(160deg, rgba(10,30,40,0.82) 0%, rgba(20,60,80,0.65) 50%, rgba(30,80,70,0.5) 100%); }
+    .header-banner::after { background: linear-gradient(160deg, rgba(10,30,40,0.82) 0%, rgba(20,60,80,0.65) 50%, rgba(30,80,70,0.5) 100%); animation: gradientShift 8s ease infinite; background-size: 200% 200%; }
     .header-wave svg path { fill: #1a1a2e; }
     .stButton > button[kind="secondary"] { border-color: #e07650 !important; color: #e07650 !important; }
     .stButton > button[kind="secondary"]:hover { background: #2e2520 !important; }
+    .day-pill { background: #242438; border-color: #3a3a50; color: #7a7490; }
+    .day-pill:hover { border-color: #5cbdad; color: #5cbdad; }
+    .day-pill-active { background: linear-gradient(135deg, #2d9bb0, #5cbdad) !important; color: white !important; }
+    .grocery-section-header { background: linear-gradient(90deg, rgba(92,189,173,0.1), transparent); border-left-color: #5cbdad; }
+    .section-divider::before, .section-divider::after { background: linear-gradient(90deg, transparent, #3a3a50, transparent); }
+    .fab-btn { background: rgba(36,36,56,0.9); border-color: rgba(92,189,173,0.2); color: #5cbdad; }
+    .fab-btn:hover { background: rgba(36,36,56,0.95); }
 </style>
 """
 
@@ -981,11 +1109,20 @@ if st.session_state.toast:
 
 tab_overview, tab_meals, tab_grocery, tab_staples = st.tabs(["\U0001f4c5 Overview", "\U0001f37d\ufe0f Meals", "\U0001f6d2 Grocery List", "\U0001f34c Staples"])
 
+FAB_HTML = """
+<div class="fab-nav">
+    <a class="fab-btn" href="#overview" onclick="document.querySelector('[data-baseweb=\\'tab\\']:nth-child(1)').click();return false;"><span class="fab-icon">\U0001f4c5</span></a>
+    <a class="fab-btn" href="#meals" onclick="document.querySelector('[data-baseweb=\\'tab\\']:nth-child(2)').click();return false;"><span class="fab-icon">\U0001f37d\ufe0f</span></a>
+    <a class="fab-btn" href="#grocery" onclick="document.querySelector('[data-baseweb=\\'tab\\']:nth-child(3)').click();return false;"><span class="fab-icon">\U0001f6d2</span></a>
+</div>
+"""
+st.markdown(FAB_HTML, unsafe_allow_html=True)
+
 with tab_overview:
+    st.markdown('<div class="section-divider"><span class="section-divider-icon">\U0001f4c5</span> Week at a Glance</div>', unsafe_allow_html=True)
     total_slots = len(DAYS) * len(MEALS)
     planned = sum(1 for d in DAYS for m in MEALS if get_meal(data, d, m).get("name"))
     pct = int(planned / total_slots * 100) if total_slots else 0
-    st.markdown("### \U0001f4c5 Week at a Glance")
     st.markdown(
         f'<div style="font-size:0.85em;color:var(--text-secondary);font-weight:600;">'
         f'{planned} of {total_slots} meals planned ({pct}%)</div>'
@@ -1073,13 +1210,12 @@ with tab_meals:
             st.session_state.search_results = []
             st.rerun()
 
-    day_dots = ""
-    for i in range(len(DAYS)):
-        if i == day_idx:
-            day_dots += f'<span style="color:var(--ocean-deep);font-size:1.4em;margin:0 3px;">\u25cf</span>'
-        else:
-            day_dots += f'<span style="color:var(--sand-dark);font-size:1.4em;margin:0 3px;">\u25cf</span>'
-    st.markdown(f'<div style="text-align:center;margin-bottom:12px;">{day_dots}</div>', unsafe_allow_html=True)
+    day_pills = '<div class="day-pills">'
+    for i, d in enumerate(DAYS):
+        active = " day-pill-active" if i == day_idx else ""
+        day_pills += f'<span class="day-pill{active}">{d.strftime("%a %d")}</span>'
+    day_pills += '</div>'
+    st.markdown(day_pills, unsafe_allow_html=True)
 
     for meal_type in MEALS:
         meal = get_meal(data, current_day, meal_type)
@@ -1285,7 +1421,7 @@ with tab_meals:
             st.markdown("---")
 
 with tab_grocery:
-    st.markdown("### \U0001f6d2 Grocery List")
+    st.markdown('<div class="section-divider"><span class="section-divider-icon">\U0001f6d2</span> Grocery List</div>', unsafe_allow_html=True)
 
     with st.form(key="grocery_form", clear_on_submit=True):
         new_item = st.text_input("Add item", placeholder="e.g. chicken thighs (3 lbs)", key="new_grocery", label_visibility="collapsed")
@@ -1351,7 +1487,7 @@ with tab_grocery:
 
         for sec, items in sections.items():
             icon = SECTION_ICONS.get(sec, "")
-            st.markdown(f'<div style="font-weight:600;font-size:0.85em;color:var(--ocean-deep);margin:12px 0 4px;">{icon} {sec}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="grocery-section-header"><span class="grocery-section-icon">{icon}</span> {sec}<span class="grocery-section-count">{len(items)} item{"s" if len(items) != 1 else ""}</span></div>', unsafe_allow_html=True)
             for idx, item in items:
                 gc = st.columns([0.5, 3, 1])
                 with gc[0]:
@@ -1397,7 +1533,7 @@ with tab_grocery:
             st.rerun()
 
 with tab_staples:
-    st.markdown("### \U0001f34c Snacks & Staples")
+    st.markdown('<div class="section-divider"><span class="section-divider-icon">\U0001f34c</span> Snacks & Staples</div>', unsafe_allow_html=True)
     st.caption("Recurring items for the trip — not tied to specific days")
     total_staples = len(data["staples"]["snacks"]) + len(data["staples"]["toddler"])
     if total_staples > 0:
