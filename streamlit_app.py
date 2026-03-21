@@ -47,6 +47,36 @@ GROCERY_SECTIONS = OrderedDict([
 ])
 SECTION_ICONS = {"Produce": "\U0001f966", "Protein & Meat": "\U0001f969", "Dairy": "\U0001f9c0", "Bakery & Bread": "\U0001f35e", "Pantry": "\U0001f3fa", "Snacks": "\U0001f36a", "Frozen": "\U0001f9ca", "Beverages": "\U0001f964", "Baby & Kids": "\U0001f476", "Other": "\U0001f4e6"}
 
+GROCERY_EMOJIS = OrderedDict([
+    ("chicken", "\U0001f357"), ("beef", "\U0001f969"), ("steak", "\U0001f969"), ("pork", "\U0001f356"),
+    ("bacon", "\U0001f953"), ("sausage", "\U0001f32d"), ("shrimp", "\U0001f990"), ("salmon", "\U0001f41f"),
+    ("fish", "\U0001f41f"), ("crab", "\U0001f980"), ("egg", "\U0001f95a"),
+    ("tomato", "\U0001f345"), ("lettuce", "\U0001f96c"), ("carrot", "\U0001f955"), ("corn", "\U0001f33d"),
+    ("potato", "\U0001f954"), ("onion", "\U0001f9c5"), ("garlic", "\U0001f9c4"), ("pepper", "\U0001fad1"),
+    ("broccoli", "\U0001f966"), ("avocado", "\U0001f951"), ("cucumber", "\U0001f952"), ("mushroom", "\U0001f344"),
+    ("lemon", "\U0001f34b"), ("lime", "\U0001f34b"), ("apple", "\U0001f34e"), ("banana", "\U0001f34c"),
+    ("grape", "\U0001f347"), ("strawberr", "\U0001f353"), ("blueberr", "\U0001fad0"), ("watermelon", "\U0001f349"),
+    ("peach", "\U0001f351"), ("pineapple", "\U0001f34d"), ("mango", "\U0001f96d"), ("cherry", "\U0001f352"),
+    ("orange", "\U0001f34a"),
+    ("milk", "\U0001f95b"), ("cheese", "\U0001f9c0"), ("butter", "\U0001f9c8"), ("yogurt", "\U0001f95b"),
+    ("bread", "\U0001f35e"), ("bun", "\U0001f35e"), ("tortilla", "\U0001fad3"), ("rice", "\U0001f35a"),
+    ("pasta", "\U0001f35d"), ("noodle", "\U0001f35c"),
+    ("oil", "\U0001fad2"), ("salt", "\U0001f9c2"), ("honey", "\U0001f36f"),
+    ("ice cream", "\U0001f368"), ("chocolate", "\U0001f36b"), ("cookie", "\U0001f36a"), ("chips", "\U0001f35f"),
+    ("water", "\U0001f4a7"), ("juice", "\U0001f9c3"), ("coffee", "\u2615"), ("tea", "\U0001fad6"),
+    ("wine", "\U0001f377"), ("beer", "\U0001f37a"),
+    ("pizza", "\U0001f355"), ("taco", "\U0001f32e"), ("burger", "\U0001f354"), ("hot dog", "\U0001f32d"),
+    ("pouch", "\U0001f9c3"), ("formula", "\U0001f37c"),
+])
+
+
+def grocery_emoji(name):
+    name_lower = name.lower()
+    for kw, emoji in GROCERY_EMOJIS.items():
+        if kw in name_lower:
+            return emoji
+    return ""
+
 
 def categorize_grocery(name):
     name_lower = name.lower()
@@ -433,15 +463,29 @@ CUSTOM_CSS = f"""
     }}
 
     .meal-row {{
-        background: var(--shell-white);
-        border: 1.5px solid var(--sand-dark);
-        border-radius: 12px;
-        padding: 14px 16px;
-        margin: 8px 0;
-        transition: box-shadow 0.15s;
+        background: rgba(255,255,255,0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255,255,255,0.7);
+        border-radius: 16px;
+        padding: 0;
+        margin: 10px 0;
+        overflow: hidden;
+        transition: box-shadow 0.2s, transform 0.2s;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
     }}
     .meal-row:hover {{
-        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }}
+    .meal-banner {{
+        width: 100%;
+        height: 140px;
+        object-fit: cover;
+        display: block;
+    }}
+    .meal-row-body {{
+        padding: 12px 16px 14px;
     }}
     .meal-row-header {{
         display: flex;
@@ -478,7 +522,8 @@ CUSTOM_CSS = f"""
         color: #5a5a5a;
     }}
     .meal-name {{
-        font-size: 0.95em;
+        font-size: 1.05em;
+        font-weight: 600;
         color: var(--text-primary);
         margin: 2px 0;
     }}
@@ -493,6 +538,7 @@ CUSTOM_CSS = f"""
         font-size: 0.88em;
         color: var(--text-muted);
         font-style: italic;
+        padding: 8px 0;
     }}
     .meal-card-img {{
         width: 80px;
@@ -507,6 +553,43 @@ CUSTOM_CSS = f"""
         gap: 14px;
         align-items: center;
         margin-top: 6px;
+    }}
+    .progress-bar-bg {{
+        background: var(--sand-dark);
+        border-radius: 10px;
+        height: 10px;
+        width: 100%;
+        overflow: hidden;
+        margin: 4px 0 12px;
+    }}
+    .progress-bar-fill {{
+        height: 100%;
+        border-radius: 10px;
+        background: linear-gradient(90deg, var(--seafoam), var(--ocean-mid));
+        transition: width 0.3s;
+    }}
+    .toast-msg {{
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(45,155,176,0.95);
+        color: white;
+        padding: 10px 28px;
+        border-radius: 24px;
+        font-weight: 600;
+        font-size: 0.9em;
+        z-index: 9999;
+        animation: toastIn 0.3s ease, toastOut 0.3s ease 2s forwards;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }}
+    @keyframes toastIn {{
+        from {{ opacity: 0; transform: translateX(-50%) translateY(20px); }}
+        to {{ opacity: 1; transform: translateX(-50%) translateY(0); }}
+    }}
+    @keyframes toastOut {{
+        from {{ opacity: 1; }}
+        to {{ opacity: 0; }};
     }}
 
     .grocery-item {{
@@ -751,6 +834,8 @@ if "search_results" not in st.session_state:
     st.session_state.search_results = []
 if "selected_recipe" not in st.session_state:
     st.session_state.selected_recipe = None
+if "toast" not in st.session_state:
+    st.session_state.toast = None
 
 data = st.session_state.data
 
@@ -807,10 +892,23 @@ with col_switch:
 if st.session_state.show_help:
     st.markdown(HOW_TO_HTML, unsafe_allow_html=True)
 
+if st.session_state.toast:
+    st.markdown(f'<div class="toast-msg">{st.session_state.toast}</div>', unsafe_allow_html=True)
+    st.session_state.toast = None
+
 tab_overview, tab_meals, tab_grocery, tab_staples = st.tabs(["\U0001f4c5 Overview", "\U0001f37d\ufe0f Meals", "\U0001f6d2 Grocery List", "\U0001f34c Staples"])
 
 with tab_overview:
+    total_slots = len(DAYS) * len(MEALS)
+    planned = sum(1 for d in DAYS for m in MEALS if get_meal(data, d, m).get("name"))
+    pct = int(planned / total_slots * 100) if total_slots else 0
     st.markdown("### \U0001f4c5 Week at a Glance")
+    st.markdown(
+        f'<div style="font-size:0.85em;color:var(--text-secondary);font-weight:600;">'
+        f'{planned} of {total_slots} meals planned ({pct}%)</div>'
+        f'<div class="progress-bar-bg"><div class="progress-bar-fill" style="width:{pct}%;"></div></div>',
+        unsafe_allow_html=True,
+    )
     legend_html = '<div class="overview-legend">'
     for member, color in COOK_COLORS.items():
         legend_html += f'<span class="overview-legend-item"><span class="overview-legend-dot" style="background:{color};"></span>{member}</span>'
@@ -869,6 +967,7 @@ with tab_meals:
         st.session_state.selected_recipe = None
         st.session_state.editing_meal = None
         st.session_state.search_results = []
+        st.session_state.toast = "\u2705 Recipe saved!"
         st.rerun()
 
     day_idx = st.session_state.current_day_idx
@@ -923,13 +1022,14 @@ with tab_meals:
             recipe_html = f' &middot; <a class="meal-recipe-link" href="{recipe_url}" target="_blank">View Recipe</a>' if recipe_url else ""
             cook_html = f'<div class="meal-cook">Cook: {cook}{recipe_html}</div>' if cook else (f'<div class="meal-cook">{recipe_html.lstrip(" &middot; ")}</div>' if recipe_url else "")
             notes_html = f'<div class="meal-cook" style="font-style:italic;">{notes}</div>' if notes else ""
-            img_html = f'<img class="meal-card-img" src="{meal_image}" onerror="this.style.display=\'none\'">' if meal_image else ""
+            banner_html = f'<img class="meal-banner" src="{meal_image}" onerror="this.style.display=\'none\'">' if meal_image else ""
             content_html = (
-                f'<div class="meal-row"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div>'
-                f'<div class="meal-card-flex">{img_html}<div><div class="meal-name">{name}</div>{cook_html}{notes_html}</div></div></div>'
+                f'<div class="meal-row">{banner_html}<div class="meal-row-body">'
+                f'<div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div>'
+                f'<div class="meal-name">{name}</div>{cook_html}{notes_html}</div></div>'
             )
         else:
-            content_html = f'<div class="meal-row"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div><div class="meal-empty">Tap edit to plan this meal</div></div>'
+            content_html = f'<div class="meal-row"><div class="meal-row-body"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div><div class="meal-empty">Tap edit to plan this meal</div></div></div>'
 
         st.markdown(content_html, unsafe_allow_html=True)
 
@@ -1096,6 +1196,7 @@ with tab_meals:
                     st.session_state.data = data
                     st.session_state.editing_meal = None
                     st.session_state.search_results = []
+                    st.session_state.toast = "\u2705 Meal saved!"
                     st.rerun()
 
             st.markdown("---")
@@ -1125,6 +1226,7 @@ with tab_grocery:
                 "checked": False,
             })
         save_data(data)
+        st.session_state.toast = f"\U0001f6d2 Added {new_item.strip()}!"
         st.rerun()
 
     unchecked = [(i, g) for i, g in enumerate(data["grocery"]) if not g.get("checked")]
@@ -1150,7 +1252,9 @@ with tab_grocery:
                 export_lines.append(f"\n{icon} {sec}")
                 for it in items:
                     ctx = f" ({it['context']})" if it.get("context") else ""
-                    export_lines.append(f"  \u25a2 {it['name']}{ctx}")
+                    item_emoji = grocery_emoji(it["name"])
+                    prefix = f"{item_emoji} " if item_emoji else ""
+                    export_lines.append(f"  \u25a2 {prefix}{it['name']}{ctx}")
             export_text = "GROCERY LIST\n" + "\n".join(export_lines)
             st.code(export_text, language=None)
             if st.button("Hide", key="hide_export"):
@@ -1174,7 +1278,9 @@ with tab_grocery:
                         st.rerun()
                 with gc[1]:
                     ctx = f' <span class="grocery-context">({item["context"]})</span>' if item.get("context") else ""
-                    st.markdown(f'{item["name"]}{ctx}', unsafe_allow_html=True)
+                    item_emoji = grocery_emoji(item["name"])
+                    prefix = f"{item_emoji} " if item_emoji else ""
+                    st.markdown(f'{prefix}{item["name"]}{ctx}', unsafe_allow_html=True)
                 with gc[2]:
                     if st.button("\u2715", key=f"grm_{idx}", use_container_width=True):
                         data["grocery"].pop(idx)
@@ -1195,7 +1301,7 @@ with tab_grocery:
                     save_data(data)
                     st.rerun()
             with gc[1]:
-                st.markdown(f'<span class="grocery-checked">{item["name"]}</span>', unsafe_allow_html=True)
+                st.markdown(f'<span class="grocery-checked">{grocery_emoji(item["name"])} {item["name"]}</span>', unsafe_allow_html=True)
             with gc[2]:
                 if st.button("\u2715", key=f"grm_{idx}", use_container_width=True):
                     data["grocery"].pop(idx)
