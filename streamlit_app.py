@@ -81,7 +81,7 @@ def _get_spreadsheet():
     client = gspread.authorize(creds)
     sh = client.open_by_url(st.secrets["spreadsheet"]["url"])
     existing = [ws.title for ws in sh.worksheets()]
-    for tab, headers in [("Meals", ["key", "name", "style", "cook", "recipe_url", "notes", "ingredients"]),
+    for tab, headers in [("Meals", ["key", "name", "style", "cook", "recipe_url", "notes", "ingredients", "image"]),
                          ("Grocery", ["name", "context", "checked"]),
                          ("Snacks", ["name"]),
                          ("Toddler", ["name"])]:
@@ -98,7 +98,7 @@ def _load_gsheets():
         for row in sh.worksheet("Meals").get_all_records():
             key = str(row.get("key", ""))
             if key:
-                data["meals"][key] = {k: str(row.get(k, "")) for k in ["name", "style", "cook", "recipe_url", "notes", "ingredients"]}
+                data["meals"][key] = {k: str(row.get(k, "")) for k in ["name", "style", "cook", "recipe_url", "notes", "ingredients", "image"]}
     except Exception:
         pass
     try:
@@ -129,9 +129,9 @@ def _save_gsheets(data):
     sh = _get_spreadsheet()
     try:
         ws = sh.worksheet("Meals")
-        rows = [["key", "name", "style", "cook", "recipe_url", "notes", "ingredients"]]
+        rows = [["key", "name", "style", "cook", "recipe_url", "notes", "ingredients", "image"]]
         for key, m in data.get("meals", {}).items():
-            rows.append([key, m.get("name", ""), m.get("style", ""), m.get("cook", ""), m.get("recipe_url", ""), m.get("notes", ""), m.get("ingredients", "")])
+            rows.append([key, m.get("name", ""), m.get("style", ""), m.get("cook", ""), m.get("recipe_url", ""), m.get("notes", ""), m.get("ingredients", ""), m.get("image", "")])
         ws.clear()
         ws.update(range_name="A1", values=rows)
     except Exception:
@@ -216,6 +216,18 @@ def clear_meal(data, day, meal_type):
     if key in data["meals"]:
         del data["meals"][key]
         save_data(data)
+
+
+def fetch_meal_image(query):
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.images(f"{query} food dish", max_results=1))
+            if results:
+                return results[0].get("thumbnail", results[0].get("image", ""))
+    except Exception:
+        pass
+    return ""
 
 
 def search_recipes(query, meal_context=""):
@@ -437,6 +449,19 @@ CUSTOM_CSS = f"""
         font-size: 0.88em;
         color: var(--text-muted);
         font-style: italic;
+    }}
+    .meal-card-img {{
+        width: 64px;
+        height: 64px;
+        object-fit: cover;
+        border-radius: 10px;
+        flex-shrink: 0;
+    }}
+    .meal-card-flex {{
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        margin-top: 4px;
     }}
 
     .grocery-item {{
@@ -779,6 +804,7 @@ with tab_meals:
             "recipe_url": sr["recipe_url"],
             "notes": sr["notes"],
             "ingredients": sr["ingredients"],
+            "image": sr.get("image", ""),
         })
         old_set = {x.strip().lower() for x in sr.get("old_ingredients", "").split(",") if x.strip()}
         day_label = sr_day.strftime("%A") + " " + sr["meal_type"].lower()
@@ -828,6 +854,7 @@ with tab_meals:
         cook = meal.get("cook", "")
         recipe_url = meal.get("recipe_url", "")
         notes = meal.get("notes", "")
+        meal_image = meal.get("image", "")
 
         badge_class = f"badge-{style.lower()}" if style else ""
         badge_html = f'<span class="meal-style-badge {badge_class}">{MEAL_ICONS.get(style, "")} {style}</span>' if style else ""
@@ -836,7 +863,11 @@ with tab_meals:
             recipe_html = f' &middot; <a class="meal-recipe-link" href="{recipe_url}" target="_blank">View Recipe</a>' if recipe_url else ""
             cook_html = f'<div class="meal-cook">Cook: {cook}{recipe_html}</div>' if cook else (f'<div class="meal-cook">{recipe_html.lstrip(" &middot; ")}</div>' if recipe_url else "")
             notes_html = f'<div class="meal-cook" style="font-style:italic;">{notes}</div>' if notes else ""
-            content_html = f'<div class="meal-row"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div><div class="meal-name">{name}</div>{cook_html}{notes_html}</div>'
+            img_html = f'<img class="meal-card-img" src="{meal_image}" onerror="this.style.display=\'none\'">' if meal_image else ""
+            content_html = (
+                f'<div class="meal-row"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div>'
+                f'<div class="meal-card-flex">{img_html}<div><div class="meal-name">{name}</div>{cook_html}{notes_html}</div></div></div>'
+            )
         else:
             content_html = f'<div class="meal-row"><div class="meal-row-header"><span class="meal-type-label">{icon} {meal_type}</span>{badge_html}</div><div class="meal-empty">Tap edit to plan this meal</div></div>'
 
@@ -961,12 +992,18 @@ with tab_meals:
                                     "old_ingredients": meal.get("ingredients", ""),
                                     "day": current_day.isoformat(),
                                     "meal_type": meal_type,
+                                    "image": r_image if r_image else fetch_meal_image(r_title if r_title else edit_name.strip()),
                                 }
                                 st.rerun()
 
                 if st.button("Save", key=f"save_{meal_type}", type="primary", use_container_width=True):
                     new_ingredients_str = edit_ingredients.strip()
                     old_ingredients_str = meal.get("ingredients", "")
+                    meal_img = meal.get("image", "")
+                    if edit_name.strip() and edit_name.strip() != name:
+                        meal_img = fetch_meal_image(edit_name.strip())
+                    elif edit_name.strip() and not meal_img:
+                        meal_img = fetch_meal_image(edit_name.strip())
                     set_meal(data, current_day, meal_type, {
                         "name": edit_name.strip(),
                         "style": edit_style,
@@ -974,6 +1011,7 @@ with tab_meals:
                         "recipe_url": edit_recipe.strip(),
                         "notes": edit_notes.strip(),
                         "ingredients": new_ingredients_str,
+                        "image": meal_img,
                     })
                     old_set = {x.strip().lower() for x in old_ingredients_str.split(",") if x.strip()} if old_ingredients_str else set()
                     new_items = [x.strip() for x in new_ingredients_str.split(",") if x.strip()]
