@@ -368,45 +368,67 @@ CUSTOM_CSS = f"""
 
     .header-banner {{
         position: relative;
-        border-radius: 16px;
+        border-radius: 20px;
         overflow: hidden;
-        padding: 36px 24px 28px;
-        margin-bottom: 8px;
+        padding: 54px 28px 48px;
+        margin-bottom: 12px;
         text-align: center;
     }}
     .header-banner::before {{
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background-image: url('data:image/png;base64,{img_b64}');
+        background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80');
         background-size: cover;
-        background-position: center 40%;
-        opacity: 0.5;
-        filter: grayscale(1) contrast(1.1);
+        background-position: center 60%;
         z-index: 0;
     }}
     .header-banner::after {{
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
-        background: linear-gradient(135deg, rgba(26,92,107,0.6), rgba(45,155,176,0.4));
+        background: linear-gradient(160deg, rgba(15,55,75,0.72) 0%, rgba(30,120,140,0.55) 50%, rgba(70,170,155,0.45) 100%);
         z-index: 1;
     }}
-    .header-banner h1, .header-banner p {{
+    .header-banner h1, .header-banner p, .header-banner .header-date {{
         position: relative;
         z-index: 2;
         color: white;
         margin: 0;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.35);
     }}
     .header-banner h1 {{
-        font-size: 1.8em;
-        margin-bottom: 2px;
-        letter-spacing: -0.02em;
+        font-size: 2.4em;
+        margin-bottom: 6px;
+        letter-spacing: -0.03em;
+        font-weight: 800;
+        text-shadow: 0 3px 12px rgba(0,0,0,0.4);
+        line-height: 1.15;
+    }}
+    .header-banner .header-date {{
+        font-size: 1.15em;
+        opacity: 0.95;
+        font-weight: 600;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        letter-spacing: 0.02em;
     }}
     .header-banner p {{
-        font-size: 1em;
-        opacity: 0.92;
+        font-size: 0.9em;
+        opacity: 0.8;
+        margin-top: 6px;
+        text-shadow: 0 1px 6px rgba(0,0,0,0.25);
+    }}
+    .header-wave {{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 2;
+        line-height: 0;
+    }}
+    .header-wave svg {{
+        display: block;
+        width: 100%;
+        height: 28px;
     }}
 
     .allergy-banner {{
@@ -814,8 +836,14 @@ CUSTOM_CSS = f"""
 
 HEADER_HTML = """
 <div class="header-banner">
-    <h1>\U0001f3d6\ufe0f Jacob Family Rehoboth Trip</h1>
-    <p>Meal Planner \u00b7 July 5 \u2013 11, 2026 \u00b7 6 adults, 3 kids</p>
+    <h1>\U0001f3d6\ufe0f Rehoboth Beach<br>Meal Planner</h1>
+    <div class="header-date">July 5 \u2013 11, 2026</div>
+    <p>Jacob Family \u00b7 6 adults, 3 kids</p>
+    <div class="header-wave">
+        <svg viewBox="0 0 500 30" preserveAspectRatio="none">
+            <path d="M0,20 C150,35 350,5 500,20 L500,30 L0,30 Z" fill="var(--sand)"/>
+        </svg>
+    </div>
 </div>
 """
 
@@ -859,7 +887,8 @@ DARK_CSS = """
     .how-to-box { background: #242438; border-color: #3a3a50; color: #b0a8c0; }
     .allergy-banner { background: #2e2520; border-color: #4a3a2e; color: #e8985e; }
     .progress-bar-bg { background: #2a2a3e; }
-    .header-banner::after { background: linear-gradient(135deg, rgba(10,30,40,0.8), rgba(20,60,80,0.6)); }
+    .header-banner::after { background: linear-gradient(160deg, rgba(10,30,40,0.82) 0%, rgba(20,60,80,0.65) 50%, rgba(30,80,70,0.5) 100%); }
+    .header-wave svg path { fill: #1a1a2e; }
     .stButton > button[kind="secondary"] { border-color: #e07650 !important; color: #e07650 !important; }
     .stButton > button[kind="secondary"]:hover { background: #2e2520 !important; }
 </style>
