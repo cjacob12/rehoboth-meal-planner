@@ -649,6 +649,10 @@ CUSTOM_CSS = f"""
         font-style: italic;
         font-size: 0.85em;
     }}
+    .overview-cell-out {{
+        background: #fff3e0;
+        border-color: #ffe0b2;
+    }}
     .overview-meal-label {{
         font-size: 0.7em;
         color: var(--text-muted);
@@ -781,12 +785,14 @@ with tab_overview:
             m_cook = m.get("cook", "")
             m_style = m.get("style", "")
             style_icon = MEAL_ICONS.get(m_style, "")
-            if m_name:
+            if m_name or m_style == "Out":
+                display_name = m_name if m_name else "Eating Out"
                 cook_color = COOK_COLORS.get(m_cook, "#8a7a6b")
                 cook_badge = f'<div><span class="overview-cell-cook" style="background:{cook_color};">{m_cook}</span></div>' if m_cook else ""
+                out_class = " overview-cell-out" if m_style == "Out" else ""
                 grid_html += (
-                    f'<div class="overview-cell">'
-                    f'<div class="overview-cell-meal">{style_icon} {m_name}</div>'
+                    f'<div class="overview-cell{out_class}">'
+                    f'<div class="overview-cell-meal">{style_icon} {display_name}</div>'
                     f'{cook_badge}'
                     f'</div>'
                 )
